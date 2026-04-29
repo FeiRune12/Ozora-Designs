@@ -17,7 +17,9 @@ class ServicoSelect(discord.ui.Select):
             discord.SelectOption(label="Ícone"),
             discord.SelectOption(label="Flyer"),
             discord.SelectOption(label="Identidade Visual"),
-            discord.SelectOption(label="Premium")
+            discord.SelectOption(label="Destaque Semanal"),
+            discord.SelectOption(label="Barrinhas"),
+            discord.SelectOption(label="Reformas")
         ]
         super().__init__(placeholder="Escolha o serviço...", options=options)
 
