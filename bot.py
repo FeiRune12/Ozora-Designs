@@ -1,8 +1,45 @@
 import discord
 from discord.ext import commands
+import os
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+CANAL_TICKETS_ID = 1498073866457714899
+
+# =========================
+# MENU DE SERVIÇOS
+# =========================
+class ServicoSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Banner"),
+            discord.SelectOption(label="Ícone"),
+            discord.SelectOption(label="Flyer"),
+            discord.SelectOption(label="Identidade Visual"),
+            discord.SelectOption(label="Premium")
+        ]
+        super().__init__(placeholder="Escolha o serviço...", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message(
+            f"Você escolheu: **{self.values[0]}**\nEnvie os detalhes do pedido 👇",
+            ephemeral=True
+        )
+
+class ServicoView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.add_item(ServicoSelect())
+
+# =========================
+# BOTÃO DE FECHAR
+# =========================
+class FecharView(discord.ui.View):
+    @discord.ui.button(label="🔒 Fechar Ticket", style=discord.ButtonStyle.red)
+    async def fechar_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Encerrando ticket... 🧹", ephemeral=True)
+        await interaction.channel.delete()
 
 # =========================
 # BOTÃO DE ABRIR TICKET
@@ -13,36 +50,23 @@ class TicketView(discord.ui.View):
         guild = interaction.guild
         user = interaction.user
 
-        # Permissões
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            user: discord.PermissionOverwrite(read_messages=True)
-        }
+        channel = guild.get_channel(CANAL_TICKETS_ID)
 
-        # Criar canal
-        channel = await guild.create_text_channel(f"ticket-{user.name}", overwrites=overwrites)
+        thread = await channel.create_thread(
+            name=f"ticket-{user.name}",
+            type=discord.ChannelType.private_thread
+        )
 
-        # Mensagem dentro do ticket
-        await channel.send(
-            f"Olá {user.mention}! 👋\n\n"
-            "**Envie as informações abaixo:**\n"
-            "• Tipo de arte\n"
-            "• Tema/estilo\n"
-            "• Texto\n"
-            "• Referência (opcional)\n\n"
-            "Quando terminar, clique no botão abaixo para fechar."
-        , view=FecharView())
+        await thread.add_user(user)
+
+        await thread.send(
+            f"Olá {user.mention}! 👋\n\nEscolha o serviço abaixo:",
+            view=ServicoView()
+        )
+
+        await thread.send("Quando terminar, clique abaixo para fechar:", view=FecharView())
 
         await interaction.response.send_message("✅ Ticket criado!", ephemeral=True)
-
-# =========================
-# BOTÃO DE FECHAR TICKET
-# =========================
-class FecharView(discord.ui.View):
-    @discord.ui.button(label="🔒 Fechar Ticket", style=discord.ButtonStyle.red)
-    async def fechar_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("Encerrando ticket... 🧹", ephemeral=True)
-        await interaction.channel.delete()
 
 # =========================
 # COMANDO PRA ENVIAR PAINEL
@@ -51,7 +75,7 @@ class FecharView(discord.ui.View):
 async def painel(ctx):
     embed = discord.Embed(
         title="🎨 Atendimento Azure Striker",
-        description="Clique no botão abaixo para abrir um ticket e solicitar seu design.",
+        description="Clique abaixo para abrir um ticket.",
         color=discord.Color.blue()
     )
     await ctx.send(embed=embed, view=TicketView())
@@ -63,5 +87,4 @@ async def painel(ctx):
 async def on_ready():
     print(f"Logado como {bot.user}")
 
-import os
 bot.run(os.getenv("TOKEN"))
